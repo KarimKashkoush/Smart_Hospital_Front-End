@@ -10,7 +10,27 @@ const DoctorDetails = () => {
   const [userName, setUserName] = useState("");
   const location = useLocation();
   const [doctorData, setDoctorData] = useState([]);
+  const [realRatings, setRealRatings] = useState([]);
   const doctor = location.state?.doctor;
+
+  useEffect(() => {
+    if (!doctor || !doctor.userId) return;
+
+    fetch(`http://localhost:5987/ratings/${doctor.userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.ratings) {
+          setRealRatings(data.ratings);
+        }
+      })
+      .catch(err => console.error("Error fetching ratings:", err));
+  }, [doctor]);
+
+  const averageRating = realRatings.length > 0
+    ? (realRatings.reduce((sum, r) => sum + (r.rating || 0), 0) / realRatings.length).toFixed(1)
+    : null;
+
+
 
   useEffect(() => {
     if (!doctor || !doctor.userId) {
@@ -34,23 +54,6 @@ const DoctorDetails = () => {
       setUserName(userData.name);
     }
   }, [doctor]);
-
-  const [reviews] = useState([
-    {
-      id: 1,
-      patientName: "Ahmed Mohamed",
-      rating: 5,
-      comment: "الدكتورة نورهان ممتازة جداً في التشخيص والعلاج، أنصح بها بشدة",
-      date: "2023-05-15"
-    },
-    {
-      id: 2,
-      patientName: "Mariam Ali",
-      rating: 4,
-      comment: "طبيبة محترفة وشرحها واضح، لكن الانتظار كان طويلاً بعض الشيء",
-      date: "2023-04-22"
-    },
-  ]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -343,16 +346,16 @@ const DoctorDetails = () => {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <span
                             key={star}
-                            className={`star ${star <= rating ? "filled" : ""}`}
-                            onClick={() => setRating(star)}
+                            className={`star ${star <= Math.round(averageRating) ? "filled" : ""}`}
                           >
                             ★
                           </span>
                         ))}
                         <span className="rating-text">
-                          {rating}.0 (24 reviews)
+                          {averageRating ? `${averageRating} (${realRatings.length} تقييم)` : "لا يوجد تقييم"}
                         </span>
                       </div>
+
                     </div>
                   </div>
                 </div>
@@ -360,39 +363,26 @@ const DoctorDetails = () => {
 
               {/* Patient Reviews Section */}
               <div className="doctor-reviews-section">
-                <div className="reviews-header">
-                  <h2>Patient Reviews</h2>
-                  <div className="average-rating">
-                    <span className="rating-number">{rating}.0</span>
-                    <div className="stars">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span key={star} className={star <= rating ? "filled" : ""}>★</span>
-                      ))}
-                    </div>
-                    <span className="total-reviews">({reviews.length} reviews)</span>
-                  </div>
-                </div>
-
                 <div className="reviews-list">
-                  {reviews.length > 0 ? (
-                    reviews.map((review) => (
-                      <div key={review.id} className="review-card">
+                  {realRatings.length > 0 ? (
+                    realRatings.map((rating, index) => (
+                      <div key={index} className="review-card">
                         <div className="review-header">
-                          <h4>{review.patientName}</h4>
+                          <h4>{rating.patient?.name || "مريض"}</h4>
                           <div className="review-rating">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <span key={star} className={star <= review.rating ? "filled" : ""}>★</span>
+                              <span key={star} className={star <= rating.rating ? "filled" : ""}>★</span>
                             ))}
                           </div>
                           <span className="review-date">
-                            {new Date(review.date).toLocaleDateString()}
+                            {new Date(rating.createdAt).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="review-comment">{review.comment}</p>
+                        <p>{rating.comment || "لا يوجد تعليق"}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="no-reviews">No reviews yet</p>
+                    <p>لا يوجد تقييمات حتى الآن</p>
                   )}
                 </div>
               </div>

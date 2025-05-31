@@ -120,19 +120,21 @@ const ViewAppointment = () => {
   const handleCancelAppointment = async (id) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.patch(`${process.env.REACT_APP_API_URL}/update-booking-status/${id}`,
-        { status: "cancelled" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.delete(`${process.env.REACT_APP_API_URL}/delete-booking/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
-      setAppointments(appointments.map(appointment =>
-        appointment.id === id ? { ...appointment, status: "Cancelled" } : appointment
-      ));
+      // بعد الحذف بنشيل الموعد من الحالة (state)
+      setAppointments(appointments.filter(appointment => appointment.id !== id));
+
     } catch (error) {
-      console.error("Error cancelling appointment:", error);
+      console.error("Error deleting appointment:", error);
       alert("فشل في إلغاء الموعد.");
     }
   };
+
 
 
 
@@ -155,20 +157,48 @@ const ViewAppointment = () => {
     });
   };
 
-  const handleSaveEdit = (id) => {
-    setAppointments(appointments.map(appointment =>
-      appointment.id === id ? {
-        ...appointment,
-        patientName: editFormData.patientName,
-        category: editFormData.category,
-        doctor: editFormData.doctor,
-        date: editFormData.date,
-        time: editFormData.time,
-        status: 'Confirmed' // Reset status to confirmed when edited
-      } : appointment
-    ));
-    setEditingAppointment(null);
+  const handleSaveEdit = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // تحويل التاريخ والوقت مع بعض ل ISO string
+      const newDate = new Date(`${editFormData.date}T${editFormData.time}`);
+
+      const response = await axios.put(`${process.env.REACT_APP_API_URL}/update-booking`, {
+        bookingId: id,
+        date: newDate.toISOString()
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      // تأكد إن الرد OK (عادة axios بيرمي خطأ لو مش OK)
+      if (response.status === 200) {
+        setAppointments(appointments.map(appointment =>
+          appointment.id === id ? {
+            ...appointment,
+            patientName: editFormData.patientName,
+            category: editFormData.category,
+            doctor: editFormData.doctor,
+            date: editFormData.date,
+            time: editFormData.time,
+            status: 'Confirmed'
+          } : appointment
+        ));
+        setEditingAppointment(null);
+      } else {
+        alert("فشل في تحديث الموعد. حاول مرة أخرى.");
+      }
+
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+      alert("فشل في تحديث الموعد. حاول مرة أخرى.");
+    }
   };
+
+
 
   const handleCancelEdit = () => {
     setEditingAppointment(null);

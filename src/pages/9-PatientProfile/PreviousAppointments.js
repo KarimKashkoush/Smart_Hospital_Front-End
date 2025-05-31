@@ -1,70 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './patientprofile.css';
 import { FaStar, FaRegStar } from 'react-icons/fa';
 
 const PreviousAppointments = () => {
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      date: 'March 15, 2023',
-      time: '10:00 AM',
-      doctor: 'Dr. Ahmed Bassiouni',
-      doctorId: 'doc1',
-      department: 'Dentistry',
-      status: 'Completed',
-      diagnosis: 'Gingivitis',
-      treatment: 'Teeth cleaning and antibiotics',
-      rating: 0,
-      feedback: '',
-      isRated: false,
-      submittedAt: null,
-      showRatingModal: false
-    },
-    {
-      id: 2,
-      date: 'February 22, 2023',
-      time: '02:30 PM',
-      doctor: 'Dr. Nourhan Makram',
-      doctorId: 'doc2',
-      department: 'Dentistry',
-      status: 'Completed',
-      diagnosis: 'Tooth decay',
-      treatment: 'Dental fillings',
-      rating: 0,
-      feedback: '',
-      isRated: false,
-      submittedAt: null,
-      showRatingModal: false
-    },
-    {
-      id: 3,
-      date: 'January 10, 2023',
-      time: '11:00 AM',
-      doctor: 'Dr. Mohamed Nashaat',
-      doctorId: 'doc3',
-      department: 'Pediatrics',
-      status: 'Completed',
-      diagnosis: 'Routine checkup',
-      treatment: 'No treatment needed',
-      rating: 0,
-      feedback: '',
-      isRated: false,
-      submittedAt: null,
-      showRatingModal: false
-    }
-  ]);
-
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [expandedAppointment, setExpandedAppointment] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+
+  useEffect(() => {
+    fetch('http://localhost:5987/medical-records')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then(data => {
+        const formattedData = data.map(item => {
+          const dateObj = new Date(item.datetime);
+          return {
+            id: item.id,
+            date: dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            time: dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            doctor: item.doctor.name,
+            doctorId: item.doctor.userId,
+            department: item.doctor.category.name,
+            diagnosis: item.diagnosis || 'No diagnosis',
+            treatment: item.treatmentDetails || 'No treatment details',
+            status: 'Completed',
+            rating: 0,
+            feedback: '',
+            isRated: false,
+            submittedAt: null,
+            showRatingModal: false
+          };
+        });
+        setAppointments(formattedData);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const toggleAppointmentDetails = (id) => {
     setExpandedAppointment(expandedAppointment === id ? null : id);
   };
 
+  // باقي الدوال الخاصة بالتقييم والfeedback زي ما عندك
+
   const handleRating = (id, rating) => {
-    setAppointments(appointments.map(appointment => 
-      appointment.id === id ? { 
-        ...appointment, 
+    setAppointments(appointments.map(appointment =>
+      appointment.id === id ? {
+        ...appointment,
         rating,
         showRatingModal: rating > 0
       } : appointment
@@ -72,16 +61,16 @@ const PreviousAppointments = () => {
   };
 
   const handleFeedbackChange = (id, value) => {
-    setAppointments(appointments.map(appointment => 
+    setAppointments(appointments.map(appointment =>
       appointment.id === id ? { ...appointment, feedback: value } : appointment
     ));
   };
 
   const closeRatingModal = (id) => {
-    setAppointments(appointments.map(appointment => 
-      appointment.id === id ? { 
-        ...appointment, 
-        showRatingModal: false 
+    setAppointments(appointments.map(appointment =>
+      appointment.id === id ? {
+        ...appointment,
+        showRatingModal: false
       } : appointment
     ));
   };
@@ -96,31 +85,30 @@ const PreviousAppointments = () => {
         showRatingModal: false
       };
 
-      // Simulate API call - replace with your actual API endpoint
-      const response = await fetch('/api/appointments/feedback', {
+      const userString = localStorage.getItem('user');
+      const user = userString ? JSON.parse(userString) : null;
+      const patientId = user?.userId;
+      const response = await fetch('http://localhost:5987/rate-doctor', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           appointmentId: id,
+          patientId,
           doctorId: updatedAppointment.doctorId,
           rating: updatedAppointment.rating,
-          feedback: updatedAppointment.feedback
+          comment: updatedAppointment.feedback
         })
       });
 
       if (!response.ok) throw new Error('Failed to save rating');
 
-      // Update local state
-      setAppointments(appointments.map(appointment => 
+      setAppointments(appointments.map(appointment =>
         appointment.id === id ? updatedAppointment : appointment
       ));
 
-      // Show success message
       alert('Rating submitted successfully!');
-      
-      // Close the modal
       closeRatingModal(id);
 
     } catch (error) {
@@ -129,14 +117,14 @@ const PreviousAppointments = () => {
     }
   };
 
-  const renderStars = (rating, interactive = false, onRate = () => {}) => {
+  const renderStars = (rating, interactive = false, onRate = () => { }) => {
     return (
       <div className="stars-container">
         {[1, 2, 3, 4, 5].map((star) => (
-          <span 
+          <span
             key={star}
             onClick={() => interactive && onRate(star)}
-            style={{ 
+            style={{
               cursor: interactive ? 'pointer' : 'default',
               color: star <= rating ? '#FFD700' : '#C0C0C0',
               fontSize: '24px',
@@ -157,7 +145,7 @@ const PreviousAppointments = () => {
       <div className="rating-modal-overlay">
         <div className="rating-modal">
           <h3>How was your visit?</h3>
-          
+
           <div className="rating-section">
             <p>Rate this appointment</p>
             {renderStars(appointment.rating, true, (rating) => handleRating(appointment.id, rating))}
@@ -174,13 +162,13 @@ const PreviousAppointments = () => {
           </div>
 
           <div className="modal-actions">
-            <button 
+            <button
               className="cancel-btn"
               onClick={() => closeRatingModal(appointment.id)}
             >
               Cancel
             </button>
-            <button 
+            <button
               className="submit-btn"
               onClick={() => submitFeedback(appointment.id)}
               disabled={appointment.rating === 0}
@@ -200,24 +188,27 @@ const PreviousAppointments = () => {
     return true;
   });
 
+  if (loading) return <div>Loading appointments...</div>;
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <div className="previous-appointments-container">
       <div className="appointments-header">
         <h1>Previous Appointments</h1>
         <div className="tabs">
-          <button 
+          <button
             className={activeTab === 'all' ? 'active' : ''}
             onClick={() => setActiveTab('all')}
           >
             All
           </button>
-          <button 
+          <button
             className={activeTab === 'rated' ? 'active' : ''}
             onClick={() => setActiveTab('rated')}
           >
             Rated
           </button>
-          <button 
+          <button
             className={activeTab === 'unrated' ? 'active' : ''}
             onClick={() => setActiveTab('unrated')}
           >
@@ -229,10 +220,10 @@ const PreviousAppointments = () => {
       <div className="appointments-list">
         {filteredAppointments.length === 0 ? (
           <div className="no-appointments">
-            {activeTab === 'rated' 
-              ? 'No rated appointments' 
-              : activeTab === 'unrated' 
-                ? 'No appointments waiting for rating' 
+            {activeTab === 'rated'
+              ? 'No rated appointments'
+              : activeTab === 'unrated'
+                ? 'No appointments waiting for rating'
                 : 'No previous appointments'}
           </div>
         ) : (
@@ -253,7 +244,7 @@ const PreviousAppointments = () => {
                       </div>
                     )}
                   </div>
-                  <button 
+                  <button
                     className="toggle-details-btn"
                     onClick={() => toggleAppointmentDetails(appointment.id)}
                   >
@@ -273,7 +264,7 @@ const PreviousAppointments = () => {
                     </div>
 
                     {!appointment.isRated ? (
-                      <button 
+                      <button
                         className="rate-btn"
                         onClick={() => handleRating(appointment.id, 1)}
                       >

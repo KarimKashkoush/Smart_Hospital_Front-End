@@ -7,6 +7,7 @@ const DoctorAppointments = () => {
   // States
   const [showDiagnosis, setShowDiagnosis] = useState(null);
   const [diagnoses, setDiagnoses] = useState({});
+  const [treatments, setTreatments] = useState({});
   const [activeTab, setActiveTab] = useState('today');
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationType, setNotificationType] = useState('');
@@ -14,7 +15,6 @@ const DoctorAppointments = () => {
   const [selectedDelay, setSelectedDelay] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [appointments, setAppointments] = useState([]);
-
 
 
   // Delay options
@@ -66,6 +66,10 @@ const DoctorAppointments = () => {
     }));
   };
 
+  const handleTreatmentChange = (appointmentId, value) => {
+    setTreatments((prev) => ({ ...prev, [appointmentId]: value }));
+  };
+
   const openNotificationModal = (type, appointment = null) => {
     setNotificationType(type);
     setSelectedAppointment(appointment);
@@ -73,51 +77,7 @@ const DoctorAppointments = () => {
     setSelectedDelay('');
   };
 
-  // إرسال الإشعار الحقيقي إلى الباك إند
-  const sendNotification = async () => {
-    if (notificationType === 'delay' && !selectedDelay) {
-      alert('Please select delay duration');
-      return;
-    }
 
-    setIsSending(true);
-
-    try {
-      // هنا يتم الاتصال بالباك إند الحقيقي
-      const response = await fetch('https://your-api-endpoint.com/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer your-auth-token' // إذا كان يحتاج مصادقة
-        },
-        body: JSON.stringify({
-          appointmentId: selectedAppointment?.id,
-          patientId: selectedAppointment?.patientId,
-          type: notificationType,
-          delayMinutes: notificationType === 'delay' ? selectedDelay : null,
-          message: notificationType === 'delay'
-            ? `Your appointment will be delayed by ${selectedDelay} minutes`
-            : 'Your doctor is absent today'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send notification');
-      }
-
-      alert(`Notification sent successfully to patient: ${notificationType === 'delay'
-        ? `Appointment delayed by ${selectedDelay} minutes`
-        : 'Doctor absence reported'
-        }`);
-
-      setShowNotificationModal(false);
-    } catch (error) {
-      console.error("Notification error:", error);
-      alert('Failed to send notification. Please try again.');
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // Submit diagnosis (مثال)
   const submitDiagnosis = async (appointment) => {
@@ -132,7 +92,7 @@ const DoctorAppointments = () => {
           doctorId: doctorId,
           patientId: appointment.patientId,
           diagnosis: diagnoses[appointment.id],
-          treatmentDetails: "",
+          treatmentDetails: treatments[appointment.id],
         }),
       });
 
@@ -154,6 +114,98 @@ const DoctorAppointments = () => {
       console.error(error);
     }
   };
+
+  const updateAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    const delayMinutes = parseInt(selectedDelay);
+    if (isNaN(delayMinutes)) {
+      alert("Invalid delay value");
+      return;
+    }
+
+    const originalDate = new Date(selectedAppointment.date);
+    const newDate = new Date(originalDate.getTime() + delayMinutes * 60000); // + delay
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/update-booking`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookingId: selectedAppointment.id,
+          date: newDate.toISOString(), // أرسل التاريخ بصيغة ISO
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update appointment");
+      }
+
+      // تحديث المواعيد محلياً بعد التعديل (لو API لا تعيد البيانات الجديدة)
+      setAppointments((prevAppointments) =>
+        prevAppointments.map((app) =>
+          app.id === selectedAppointment.id ? { ...app, date: newDate.toISOString() } : app
+        )
+      );
+
+      alert("Appointment delayed successfully");
+      setShowNotificationModal(false);
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+      alert("Error while updating appointment delay");
+    }
+  };
+
+
+  const sendNotification = async () => {
+    if (notificationType === 'delay' && !selectedDelay) {
+      alert('Please select delay duration');
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      // 1. تحديث الموعد
+      if (notificationType === 'delay') {
+        await updateAppointment();
+      }
+
+      // 2. إرسال الإشعار
+      // const response = await fetch(`${process.env.REACT_APP_API_URL}`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${token}`
+      //   },
+      //   body: JSON.stringify({
+      //     appointmentId: selectedAppointment?.id,
+      //     patientId: selectedAppointment?.patientId,
+      //     type: notificationType,
+      //     delayMinutes: notificationType === 'delay' ? selectedDelay : null,
+      //     message: notificationType === 'delay'
+      //       ? `Your appointment will be delayed by ${selectedDelay} minutes`
+      //       : 'Your doctor is absent today'
+      //   })
+      // });
+
+      // if (!response.ok) {
+      //   throw new Error('Failed to send notification');
+      // }
+
+      alert("Notification sent successfully");
+      setShowNotificationModal(false);
+    } catch (error) {
+      console.error("Notification error:", error);
+      alert("Failed to send notification. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
 
 
 
@@ -268,14 +320,16 @@ const DoctorAppointments = () => {
                 <p className="appointment-time">
                   {(() => {
                     const originalDate = new Date(appointment.date);
-                    const hours = originalDate.getHours().toString().padStart(2, '0');
+                    let hours = originalDate.getHours();
                     const minutes = originalDate.getMinutes().toString().padStart(2, '0');
-                    return `${hours}:${minutes}`;
-
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    hours = hours % 12;
+                    hours = hours ? hours : 12; // لو الساعة 0 خليها 12
+                    return `${hours}:${minutes} ${ampm}`;
                   })()}
                 </p>
                 <span className={`status-badge ${appointment.status}`}>
-                  confirmed
+                  {appointment.status}
                 </span>
               </div>
 
@@ -301,25 +355,29 @@ const DoctorAppointments = () => {
                   <textarea
                     value={diagnoses[appointment.id] || ''}
                     onChange={(e) => handleDiagnosisChange(appointment.id, e.target.value)}
-                    placeholder="Enter diagnosis, medications, and recommendations..."
+                    placeholder="Enter diagnosis..."
                     rows="5"
                   />
+
+                  <h4>Treatment Plan</h4>
+                  <textarea
+                    value={treatments[appointment.id] || ''}
+                    onChange={(e) => handleTreatmentChange(appointment.id, e.target.value)}
+                    placeholder="Enter medications and recommendations..."
+                    rows="5"
+                  />
+
                   <div className="diagnosis-actions">
-                    <button
-                      className="cancel-btn"
-                      onClick={() => setShowDiagnosis(null)}
-                    >
+                    <button className="cancel-btn" onClick={() => setShowDiagnosis(null)}>
                       Cancel
                     </button>
-                    <button
-                      className="submit-btn"
-                      onClick={() => submitDiagnosis(appointment)}
-                    >
+                    <button className="submit-btn" onClick={() => submitDiagnosis(appointment)}>
                       Submit Diagnosis
                     </button>
                   </div>
                 </div>
               )}
+
             </div>
           ));
         })()}

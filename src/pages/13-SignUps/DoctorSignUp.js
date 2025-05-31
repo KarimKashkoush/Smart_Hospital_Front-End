@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import "./EmployeeSignUp.css";
 
 const DoctorSignUp = () => {
   const navigate = useNavigate();
-
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     fullName: '',
     specialization: '',
@@ -18,20 +18,21 @@ const DoctorSignUp = () => {
     birthDate: '',
   });
 
-  const specializations = [
-    'Neurology',
-    'Cardiology',
-    'Dermatology',
-    'Pediatrics',
-    'Orthopedics',
-    'Ophthalmology',
-    'Gastroenterology',
-    'Endocrinology',
-    'Psychiatry',
-    'Radiology',
-    'General Surgery',
-    'Internal Medicine'
-  ];
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/get-categories`);
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,12 +102,14 @@ const DoctorSignUp = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    const selectedCategory = categories.find(cat => cat.name.toLowerCase() === formData.specialization.toLowerCase());
+    const categoryId = selectedCategory ? selectedCategory.id : null;
 
     const postData = {
       username: formData.email,
       password: formData.password,
       name: formData.fullName,
-      categoryId: 1,
+      categoryId: categoryId,
       birthDate: formData.birthDate,
       yearsofExperience: formData.experience,
       education: formData.education,
@@ -200,9 +203,12 @@ const DoctorSignUp = () => {
               className={errors.specialization ? 'error' : ''}
             >
               <option value="">Select Specialization</option>
-              {specializations.map((spec) => (
-                <option key={spec} value={spec}>{spec}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.name}>
+                  {category.name}
+                </option>
               ))}
+
             </select>
             {errors.specialization && <span className="error-message">{errors.specialization}</span>}
           </div>
