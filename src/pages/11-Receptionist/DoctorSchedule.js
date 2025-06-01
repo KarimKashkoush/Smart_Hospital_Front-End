@@ -18,16 +18,19 @@ const DoctorSchedule = () => {
     fetch(`${process.env.REACT_APP_API_URL}/doctors`)
       .then(res => res.json())
       .then(data => {
-        setDoctors(data.doctors); // خزن كل كائن الدكتور
+        console.log(data); // للتأكد من شكل الداتا
 
-        // تحويل الداتا إلى شكل schedules المطلوب في الجدول
+        const doctorsArray = Array.isArray(data) ? data : data.doctors || [];
+
+        setDoctors(doctorsArray);
+
         const loadedSchedules = [];
-        data.doctors.forEach(doctor => {
+        doctorsArray.forEach(doctor => {
           doctor.timeSlots.forEach(slot => {
             loadedSchedules.push({
               id: slot.id,
               doctor: doctor.name,
-              date: slot.dayOfWeek,  // بما ان الداتا بتعتمد على يوم مش تاريخ كامل
+              date: slot.dayOfWeek,
               timeSlots: [{ from: slot.startTime, to: slot.endTime }]
             });
           });
@@ -36,7 +39,6 @@ const DoctorSchedule = () => {
       })
       .catch(err => console.error('Error loading doctors:', err));
   }, []);
-
 
   const removeTimeSlot = (index, isEdit = false) => {
     if (isEdit) {
@@ -211,7 +213,7 @@ const DoctorSchedule = () => {
       }
     }
   };
-  
+
 
 
   const cancelEdit = () => {

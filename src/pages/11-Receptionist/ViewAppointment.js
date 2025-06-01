@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import emailjs from '@emailjs/browser';
 import './Receptionist.css';
 import axios from 'axios';
+
 
 const ViewAppointment = () => {
 
@@ -24,7 +26,6 @@ const ViewAppointment = () => {
     date: '',
     time: ''
   });
-
 
 
   useEffect(() => {
@@ -73,7 +74,6 @@ const ViewAppointment = () => {
           }))
         );
 
-        console.log("Mapped Appointments:", mappedAppointments);
 
         setAppointments(mappedAppointments);
       } catch (error) {
@@ -116,6 +116,8 @@ const ViewAppointment = () => {
       setFilteredDoctors(filtered);
     }
   };
+
+
 
   const handleCancelAppointment = async (id) => {
     try {
@@ -161,9 +163,11 @@ const ViewAppointment = () => {
     try {
       const token = localStorage.getItem("token");
 
+      // جيب بيانات الموعد الأصلي من appointments بناءً على id
+      const originalAppointment = appointments.find(app => app.id === id);
+
       // تحويل التاريخ والوقت مع بعض ل ISO string
       const newDate = new Date(`${editFormData.date}T${editFormData.time}`);
-
       const response = await axios.put(`${process.env.REACT_APP_API_URL}/update-booking`, {
         bookingId: id,
         date: newDate.toISOString()
@@ -174,7 +178,6 @@ const ViewAppointment = () => {
         }
       });
 
-      // تأكد إن الرد OK (عادة axios بيرمي خطأ لو مش OK)
       if (response.status === 200) {
         setAppointments(appointments.map(appointment =>
           appointment.id === id ? {
@@ -184,10 +187,45 @@ const ViewAppointment = () => {
             doctor: editFormData.doctor,
             date: editFormData.date,
             time: editFormData.time,
-            status: 'Confirmed'
           } : appointment
         ));
         setEditingAppointment(null);
+        console.log(originalAppointment, newDate)
+
+        // هنا هنستخدم بيانات originalAppointment للارسال (البيانات اللي في الجدول قبل التعديل)
+        const patientEmail = originalAppointment.patientEmail || 'karimkashkoush5@gmail.com'; // لو معاك الإيميل موجود هنا
+        const patientName = originalAppointment.patientName;
+        const doctorName = originalAppointment.doctor;
+        const formattedTime = newDate.toLocaleString("en-EG", {
+          weekday: 'long',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true,
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+
+        const templateParams = {
+          email: patientEmail,
+          to_name: patientName,
+          doctor_name: doctorName,
+          new_time: formattedTime,
+        };
+
+        try {
+          await emailjs.send(
+            'service_y6vn5pt',
+            'template_aalcj2d',
+            templateParams,
+            'FhTcF7m0QfVZjJ_6Z'
+          );
+          alert('تم تحديث الموعد وإرسال الإشعار للمريض');
+        } catch (emailError) {
+          console.error('خطأ في إرسال الإيميل:', emailError);
+          alert('تم تحديث الموعد لكن حدث خطأ في إرسال الإشعار.');
+        }
+
       } else {
         alert("فشل في تحديث الموعد. حاول مرة أخرى.");
       }
@@ -197,6 +235,8 @@ const ViewAppointment = () => {
       alert("فشل في تحديث الموعد. حاول مرة أخرى.");
     }
   };
+
+
 
 
 

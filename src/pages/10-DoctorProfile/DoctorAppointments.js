@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './doctorprofile.css';
+import emailjs from '@emailjs/browser';
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user'));
 const doctorId = user?.userId;
@@ -96,38 +97,65 @@ const DoctorAppointments = () => {
         }),
       });
 
-      console.log({
-        doctorId: doctorId,
-        patientId: appointment.patientId,
-        diagnosis: diagnoses[appointment.id],
-      });
-
-
       if (!response.ok) {
         throw new Error("Failed to submit diagnosis");
       }
 
-      alert("Diagnosis submitted successfully!");
+      const updateResponse = await fetch(`${process.env.REACT_APP_API_URL}/update-booking`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookingId: appointment.id,
+          status: "confirmed",
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update booking status");
+      }
+
+      alert("Diagnosis submitted and booking status updated successfully!");
       setShowDiagnosis(null);
+
+      // تحديث الحالة محلياً (لو تحب)
+      setAppointments((prev) =>
+        prev.map((app) =>
+          app.id === appointment.id ? { ...app, status: "confirmed" } : app
+        )
+      );
+
     } catch (error) {
-      alert("Error submitting diagnosis");
+      alert("Error submitting diagnosis or updating booking status");
       console.error(error);
     }
   };
 
-  const updateAppointment = async () => {
+
+
+  const handleDelayAndNotify = async () => {
     if (!selectedAppointment) return;
 
-    const delayMinutes = parseInt(selectedDelay);
-    if (isNaN(delayMinutes)) {
-      alert("Invalid delay value");
+    if (notificationType === 'delay' && !selectedDelay) {
+      alert('يرجى تحديد مدة التأخير');
       return;
     }
 
+    const delayMinutes = parseInt(selectedDelay);
+    if (isNaN(delayMinutes)) {
+      alert("قيمة التأخير غير صالحة");
+      return;
+    }
+
+    setIsSending(true);
+
     const originalDate = new Date(selectedAppointment.date);
-    const newDate = new Date(originalDate.getTime() + delayMinutes * 60000); // + delay
+    const newDate = new Date(originalDate.getTime() + delayMinutes * 60000);
 
     try {
+      // 1. تحديث الموعد
       const response = await fetch(`${process.env.REACT_APP_API_URL}/update-booking`, {
         method: "PUT",
         headers: {
@@ -136,77 +164,61 @@ const DoctorAppointments = () => {
         },
         body: JSON.stringify({
           bookingId: selectedAppointment.id,
-          date: newDate.toISOString(), // أرسل التاريخ بصيغة ISO
+          date: newDate.toISOString(),
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update appointment");
+        throw new Error("فشل تحديث الموعد");
       }
 
-      // تحديث المواعيد محلياً بعد التعديل (لو API لا تعيد البيانات الجديدة)
+      // 2. تحديث المواعيد محلياً
       setAppointments((prevAppointments) =>
         prevAppointments.map((app) =>
           app.id === selectedAppointment.id ? { ...app, date: newDate.toISOString() } : app
         )
       );
 
-      alert("Appointment delayed successfully");
+      // 3. إرسال الإشعار بالإيميل
+      const patientEmail = selectedAppointment.patient.email;
+      const patientName = selectedAppointment.patient.name;
+      const doctorName = selectedAppointment.doctorName;
+
+      // استخدم التاريخ الجديد بعد التأخير عشان تظهر في الإشعار
+      const formattedTime = newDate.toLocaleString("en-EG", {
+        weekday: 'long',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+      const templateParams = {
+        email: patientEmail,
+        to_name: patientName,
+        doctor_name: doctorName,
+        new_time: formattedTime,
+      };
+
+      await emailjs.send(
+        'service_y6vn5pt',
+        'template_aalcj2d',
+        templateParams,
+        'FhTcF7m0QfVZjJ_6Z'
+      );
+
+      alert('تم تحديث الموعد وإرسال الإشعار للمريض');
       setShowNotificationModal(false);
+
     } catch (error) {
-      console.error("Error updating appointment:", error);
-      alert("Error while updating appointment delay");
-    }
-  };
-
-
-  const sendNotification = async () => {
-    if (notificationType === 'delay' && !selectedDelay) {
-      alert('Please select delay duration');
-      return;
-    }
-
-    setIsSending(true);
-
-    try {
-      // 1. تحديث الموعد
-      if (notificationType === 'delay') {
-        await updateAppointment();
-      }
-
-      // 2. إرسال الإشعار
-      // const response = await fetch(`${process.env.REACT_APP_API_URL}`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`
-      //   },
-      //   body: JSON.stringify({
-      //     appointmentId: selectedAppointment?.id,
-      //     patientId: selectedAppointment?.patientId,
-      //     type: notificationType,
-      //     delayMinutes: notificationType === 'delay' ? selectedDelay : null,
-      //     message: notificationType === 'delay'
-      //       ? `Your appointment will be delayed by ${selectedDelay} minutes`
-      //       : 'Your doctor is absent today'
-      //   })
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to send notification');
-      // }
-
-      alert("Notification sent successfully");
-      setShowNotificationModal(false);
-    } catch (error) {
-      console.error("Notification error:", error);
-      alert("Failed to send notification. Please try again.");
+      console.error('حدث خطأ:', error);
+      alert('حدث خطأ أثناء تأجيل الموعد أو إرسال الإشعار');
     } finally {
       setIsSending(false);
     }
   };
-
-
 
 
   const getDayName = (date) => {
@@ -216,16 +228,6 @@ const DoctorAppointments = () => {
   return (
     <div className="appointments-container">
       <h2 className="section-title">My Appointments</h2>
-
-      {/* Global absence button */}
-      <div className="global-notification-actions">
-        <button
-          className="global-absence-btn"
-          onClick={() => openNotificationModal('absence')}
-        >
-          Report Absence for Today
-        </button>
-      </div>
 
       {/* Appointment tabs */}
       <div className="appointment-tabs">
@@ -304,8 +306,10 @@ const DoctorAppointments = () => {
           const filteredAppointments = appointments.filter(app => {
             if (!filterDate) return false;
             const appDate = new Date(app.date);
-            return appDate.toDateString() === filterDate.toDateString();
+            return appDate.toDateString() === filterDate.toDateString() && app.status.toLowerCase() === 'pending';
           });
+
+
 
           // لو فاضية أظهر رسالة
           if (filteredAppointments.length === 0) {
@@ -415,7 +419,7 @@ const DoctorAppointments = () => {
 
             <div className="modal-actions">
               <button
-                onClick={sendNotification}
+                onClick={handleDelayAndNotify}
                 disabled={isSending || (notificationType === 'delay' && !selectedDelay)}
                 className="confirm-btn"
               >

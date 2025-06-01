@@ -5,7 +5,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import './doctorprofile.css';
 import DoctorAppointments from './DoctorAppointments';
 import MedicalExcuseD from './MedicalExcuseD';
-
+import Swal from 'sweetalert2';
 const DoctorProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -25,7 +25,8 @@ const DoctorProfile = () => {
     experience: '',
     education: '',
     medicalExcuse: [],
-    profileImage: ''
+    profileImage: '',
+    Rating: [],
   });
 
   const onSelectFile = (e) => {
@@ -113,16 +114,17 @@ const DoctorProfile = () => {
 
         setDoctorData(prev => ({
           ...prev,
-          name: data.doctor.name,
-          phone: data.doctor.phone,
-          email: data.doctor.email,
-          specialization: data.doctor.specializationShort,
-          experience: data.doctor.yearsofExperience,
-          education: data.doctor.education,
-          age: calculateAge(data.doctor.birthDate),
-          id: data.doctor.userId,
-          medicalExcuse: data.doctor.medicalExcuse,
-          profileImage: data.doctor.profileImage || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          specialization: data.specializationShort,
+          experience: data.yearsofExperience,
+          education: data.education,
+          age: calculateAge(data.birthDate),
+          id: data.userId,
+          medicalExcuse: data.medicalExcuse,
+          profileImage: data.profileImage || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+          Rating: data.Rating
         }));
       } catch (err) {
         console.error(err.message);
@@ -143,6 +145,8 @@ const DoctorProfile = () => {
     setDoctorData(prev => ({ ...prev, [name]: value }));
   };
 
+  console.log(doctorData)
+
   const handleSave = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -162,7 +166,6 @@ const DoctorProfile = () => {
         }),
       };
 
-
       const response = await fetch(`${process.env.REACT_APP_API_URL}/update-doctor/${doctorData.id}`, {
         method: 'PATCH',
         headers: {
@@ -175,20 +178,33 @@ const DoctorProfile = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Profile updated successfully!");
+        await Swal.fire({
+          icon: 'success',
+          title: 'Profile updated!',
+          text: 'تم تحديث الملف الشخصي بنجاح',
+          timer: 2000,
+          showConfirmButton: false
+        });
         setIsEditing(false);
       } else {
-        alert(data.message || "Update failed.");
+        Swal.fire({
+          icon: 'error',
+          title: 'Update failed',
+          text: data.message || 'حدث خطأ أثناء التحديث'
+        });
       }
     } catch (err) {
       console.error("Update error:", err);
-      alert("Something went wrong while updating profile.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'حدث خطأ أثناء تحديث الملف الشخصي'
+      });
     }
   };
-
   const renderContent = () => {
     switch (activePage) {
-      case 'appointments': return <DoctorAppointments doctorData={doctorData}/>;
+      case 'appointments': return <DoctorAppointments doctorData={doctorData} />;
       case 'excuses': return <MedicalExcuseD doctorData={doctorData} />;
       case 'profile':
       default:
@@ -221,7 +237,14 @@ const DoctorProfile = () => {
                 <h2>{doctorData.name}</h2>
               </div>
             </div>
-            <div className="rating-box">{doctorData.specialization} ⭐⭐⭐⭐⭐ 5.0 Rating</div>
+            <div className="rating-box">
+              {doctorData.specialization} {' '}
+              {'⭐'.repeat(Math.round(calculateAverageRating()))}
+              {'☆'.repeat(5 - Math.round(calculateAverageRating()))} {' '}
+              {calculateAverageRating()} Rating
+            </div>
+
+
             <div className="contact-box">
               <h3>Contact</h3>
               {isEditing ? (
@@ -276,6 +299,16 @@ const DoctorProfile = () => {
     localStorage.clear();
     navigate('/logIn');
   };
+
+  // حساب متوسط التقييم (لو مفيش تقييمات يرجع 0)
+  const calculateAverageRating = () => {
+    if (!doctorData.Rating || doctorData.Rating.length === 0) return 0;
+    const total = doctorData.Rating.reduce((sum, r) => sum + r.rating, 0);
+    return (total / doctorData.Rating.length).toFixed(1); // عدد عشري واحد
+  };
+
+
+  console.log(doctorData.Rating)
 
 
   return (

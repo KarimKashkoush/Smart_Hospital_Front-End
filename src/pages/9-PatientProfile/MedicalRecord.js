@@ -1,34 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import "./MedicalRecird.css";
+
 const MedicalRecord = () => {
   const [expandedRecords, setExpandedRecords] = useState({});
+  const [records, setRecords] = useState([]);
+  const [doctorNames, setDoctorNames] = useState({}); // خزن أسماء الدكاترة
 
-  const records = [
-    {
-      id: 1,
-      date: "27 FEB",
-      time: "10:30 AM",
-      doctor: "DR/Nourhan mokhtar",
-      patient: "Record for selim abotaleb",
-      details: "Dental checkup and cleaning. Found two cavities that need filling."
-    },
-    {
-      id: 2,
-      date: "28 FEB",
-      time: "02:15 PM",
-      doctor: "DR/Ahmed basyony",
-      patient: "Record for selim abotaleb",
-      details: "Orthodontic consultation. Recommended braces treatment plan."
-    },
-    {
-      id: 3,
-      date: "01 MAR",
-      time: "09:00 AM",
-      doctor: "DR/Mohamed nashat",
-      patient: "Record for selim abotaleb",
-      details: "Pediatric dental examination. Baby teeth are developing normally."
-    }
-  ];
+  useEffect(() => {
+    const userString = localStorage.getItem('user');
+    if (!userString) return;
+
+    const user = JSON.parse(userString);
+    const patientId = user.userId;
+    if (!patientId) return;
+
+    fetch(`http://localhost:5987/getPatient/${patientId}`)
+      .then(res => res.json())
+      .then(async data => {
+        if (data.medicalRecord) {
+          const formattedRecords = data.medicalRecord.map(record => {
+            const dateObj = new Date(record.datetime);
+            const options = { day: '2-digit', month: 'short' };
+            const date = dateObj.toLocaleDateString('en-US', options).toUpperCase();
+            let hours = dateObj.getHours();
+            const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            const time = `${hours}:${minutes} ${ampm}`;
+
+            return {
+              id: record.id,
+              date,
+              time,
+              doctorId: record.doctorId,  // هنخزن الـ doctorId هنا
+              patient: `Record for ${data.name}`,
+              diagnosis: record.diagnosis,
+              treatment: record.treatmentDetails,
+              status: record.status,
+              isRated: record.isRated
+            };
+          });
+
+          setRecords(formattedRecords);
+
+          // جلب أسماء الدكاترة بشكل منفصل
+          const uniqueDoctorIds = [...new Set(formattedRecords.map(r => r.doctorId))];
+
+          // نعمل fetch لكل دكتور ونخزن اسمه
+          const namesMap = {};
+          await Promise.all(uniqueDoctorIds.map(async (id) => {
+            try {
+              const res = await fetch(`http://localhost:5987/get-doctor/${id}`);
+              if (res.ok) {
+                const doctorData = await res.json();
+                namesMap[id] = doctorData.name;
+              } else {
+                namesMap[id] = `DR/ID ${id}`; // fallback لو مفيش داتا
+              }
+            } catch {
+              namesMap[id] = `DR/ID ${id}`; // fallback لو في error
+            }
+          }));
+
+          setDoctorNames(namesMap);
+        }
+      })
+      .catch(err => console.error(err));
+  }, []);
 
   const toggleDetails = (recordId) => {
     setExpandedRecords(prev => ({
@@ -48,21 +86,27 @@ const MedicalRecord = () => {
               <div className="timeline-time">{record.time}</div>
             </div>
             <div className="timeline-content">
-              <div className="doctor-info">{record.doctor}</div>
+              <div className="doctor-info">{doctorNames[record.doctorId] || `DR/ID ${record.doctorId}`}</div>
               <div className="patient-info">{record.patient}</div>
-              
-              <button 
+
+              <button
                 className="view-button"
                 onClick={() => toggleDetails(record.id)}
               >
                 {expandedRecords[record.id] ? 'Hide Details' : 'View Details'}
               </button>
-              
+
               {expandedRecords[record.id] && (
-                <div className="record-details">
-                  <h4>Treatment Details:</h4>
-                  <p>{record.details}</p>
-                </div>
+                <>
+                  <div className="record-details">
+                    <h4>Diagnosis:</h4>
+                    <p>{record.diagnosis}</p>
+                  </div>
+                  <div className="record-details">
+                    <h4>Treatment:</h4>
+                    <p>{record.treatment}</p>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -71,4 +115,5 @@ const MedicalRecord = () => {
     </div>
   );
 };
-export default MedicalRecord;
+
+export default MedicalRecord;

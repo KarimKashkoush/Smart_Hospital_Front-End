@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import './patientprofile.css';
 
-// const token = localStorage.getItem("token");
 const RequestMedicalExcuse = () => {
   const navigate = useNavigate();
 
@@ -23,19 +22,14 @@ const RequestMedicalExcuse = () => {
   const [categories, setCategories] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [submittedExcuses, setSubmittedExcuses] = useState([
-  ]);
-
-
-
+  const [submittedExcuses, setSubmittedExcuses] = useState([]);
   const [doctors, setDoctors] = useState([]);
 
   useEffect(() => {
-    // جلب الدكاترة مرة واحدة
     const fetchDoctors = async () => {
       try {
         const res = await axios.get(`${process.env.REACT_APP_API_URL}/doctors`);
-        setDoctors(res.data.doctors); // فرضًا الشكل
+        setDoctors(res.data);
       } catch (err) {
         console.error(err);
       }
@@ -43,55 +37,8 @@ const RequestMedicalExcuse = () => {
     fetchDoctors();
   }, []);
 
-  useEffect(() => {
-  const fetchAllExcuses = async () => {
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-    if (!token || !user.userId || doctors.length === 0 || categories.length === 0) return;
-
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/getPatient/${user.userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch patient data");
-
-      const data = await response.json();
-
-      if (data.MedicalExcuse) {
-        const enrichedExcuses = data.MedicalExcuse.map(excuse => {
-          const categoryName = categories.find(cat => cat.id === excuse.categoryId)?.name || "No Category";
-          const doctor = doctors.find(d => d.userId === excuse.doctorId);
-
-          return {
-            id: excuse.id,
-            fullName: data.fullName || data.name || "",
-            email: excuse.email || data.email || "",
-            startDate: excuse.startDate?.split('T')[0] || "",
-            endDate: excuse.endDate?.split('T')[0] || "",
-            category: categoryName,
-            doctor: doctor ? doctor.name : "Unknown Doctor",
-            reason: excuse.reason,
-            status: excuse.status || "Pending",
-            submittedDate: excuse.createdAt?.split('T')[0] || "",
-            image: excuse.image,
-            rejectionReason: excuse.rejectionReason || ""
-          };
-        });
-
-        setSubmittedExcuses(enrichedExcuses);
-      }
-    } catch (error) {
-      console.error("Error fetching excuses:", error);
-    }
-  };
-
-  fetchAllExcuses();
-}, [categories, doctors]);
 
   useEffect(() => {
-    // 1- تجيب الكاتيجوريز
     const fetchCategories = async () => {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_URL}/get-categories`);
@@ -100,15 +47,27 @@ const RequestMedicalExcuse = () => {
         console.error("Error fetching categories:", error);
       }
     };
-
     fetchCategories();
   }, []);
 
+
   useEffect(() => {
-    const fetchPatientExcuses = async () => {
+    console.log("Categories:", categories);
+    console.log("Doctors:", doctors);
+
+    const fetchAllExcuses = async () => {
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!token || !user.userId) return;
+
+      console.log("Token:", token);
+      console.log("User ID:", user.userId);
+      console.log("Doctors length:", doctors?.length);
+      console.log("Categories length:", categories?.length);
+
+      if (!token || !user.userId || !doctors?.length || !categories?.length) {
+        console.log("One or more required values missing, stopping fetch");
+        return;
+      }
 
       try {
         const response = await fetch(`${process.env.REACT_APP_API_URL}/getPatient/${user.userId}`, {
@@ -118,40 +77,48 @@ const RequestMedicalExcuse = () => {
         if (!response.ok) throw new Error("Failed to fetch patient data");
 
         const data = await response.json();
-        console.log("Categories:", categories);
-        console.log("MedicalExcuse data:", data.MedicalExcuse);
 
-        if (data.MedicalExcuse) {
-          setSubmittedExcuses(data.MedicalExcuse.map(excuse => {
+        console.log("Patient Data:", data);
+
+        if (Array.isArray(data.MedicalExcuse)) {
+          const enrichedExcuses = data.MedicalExcuse.map((excuse) => {
             const categoryName = categories.find(cat => cat.id === excuse.categoryId)?.name || "No Category";
             const doctor = doctors.find(d => d.userId === excuse.doctorId);
+
             return {
               id: excuse.id,
               fullName: data.fullName || data.name || "",
               email: excuse.email || data.email || "",
-              startDate: excuse.startDate.split('T')[0],
-              endDate: excuse.endDate.split('T')[0],
+              startDate: excuse.startDate?.split('T')[0] || "",
+              endDate: excuse.endDate?.split('T')[0] || "",
               category: categoryName,
               doctor: doctor ? doctor.name : "Unknown Doctor",
               reason: excuse.reason,
               status: excuse.status || "Pending",
-              submittedDate: excuse.createdAt.split('T')[0],
+              submittedDate: excuse.createdAt?.split('T')[0] || "",
               image: excuse.image,
+              rejectionReason: excuse.rejectionReason || ""
             };
-          }));
+          });
+
+          console.log("Enriched excuses:", enrichedExcuses);
+
+          setSubmittedExcuses(enrichedExcuses);
         }
       } catch (error) {
-        console.error("Error fetching patient data:", error);
+        console.error("Error fetching excuses:", error);
       }
     };
 
-    if (categories.length > 0 && doctors.length > 0) {
-      fetchPatientExcuses();
+    if (Array.isArray(categories) && Array.isArray(doctors)) {
+      fetchAllExcuses();
     }
   }, [categories, doctors]);
 
+
+
   const handleCategoryChange = (e) => {
-    const categoryId = Number(e.target.value); // مهم تبقى رقم
+    const categoryId = Number(e.target.value);
     const selectedCategory = categories.find(cat => cat.id === categoryId);
 
     setFormData({
@@ -161,7 +128,7 @@ const RequestMedicalExcuse = () => {
     });
 
     if (selectedCategory) {
-      setFilteredDoctors(selectedCategory.doctor); // doctor جاي من الباك
+      setFilteredDoctors(selectedCategory.doctor);
     } else {
       setFilteredDoctors([]);
     }
@@ -217,9 +184,7 @@ const RequestMedicalExcuse = () => {
     data.append("endDate", new Date(formData.endDate).toISOString());
     data.append("reason", formData.reason);
     data.append("doctorId", Number(selectedDoctor.userId));
-
-    // ** هنا تضيف categoryId **
-    data.append("categoryId", Number(formData.category));  // طالما formData.category رقم (أو string يمثل رقم)
+    data.append("categoryId", Number(formData.category));
 
     if (formData.document) {
       data.append("attachment", formData.document);
@@ -249,10 +214,6 @@ const RequestMedicalExcuse = () => {
     }
   };
 
-
-
-
-
   return (
     <div className="excuse-container">
       <h1 className="excuse-title">Request Medical Excuse</h1>
@@ -262,38 +223,15 @@ const RequestMedicalExcuse = () => {
           <h2 className="excuse-section-title">Patient Information</h2>
           <div className="excuse-group">
             <label className="excuse-label">Full Name:</label>
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              className="excuse-input"
-              required
-            />
+            <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="excuse-input" required />
           </div>
-
           <div className="excuse-group">
             <label className="excuse-label">Email:</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="excuse-input"
-              required
-            />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} className="excuse-input" required />
           </div>
-
           <div className="excuse-group">
             <label className="excuse-label">Phone:</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="excuse-input"
-              required
-            />
+            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="excuse-input" required />
           </div>
         </div>
 
@@ -302,71 +240,33 @@ const RequestMedicalExcuse = () => {
           <div className="excuse-row">
             <div className="excuse-group">
               <label className="excuse-label">Start Date:</label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className="excuse-input"
-                required
-              />
+              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="excuse-input" required />
             </div>
-
             <div className="excuse-group">
               <label className="excuse-label">End Date:</label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className="excuse-input"
-                required
-              />
+              <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="excuse-input" required />
             </div>
           </div>
 
           <div className="excuse-group">
             <label className="excuse-label">Category:</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleCategoryChange}
-              className="excuse-select"
-              required
-            >
+            <select name="category" value={formData.category} onChange={handleCategoryChange} className="excuse-select" required>
               <option value="">Select Category</option>
               {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
-
 
           {formData.category && (
             <div className="excuse-group">
               <label className="excuse-label">Doctor:</label>
               <div className="excuse-search-container">
-                <input
-                  type="text"
-                  placeholder="Search doctors..."
-                  value={searchTerm}
-                  onChange={handleDoctorSearch}
-                  className="excuse-search"
-                />
-                <select
-                  name="doctor"
-                  value={formData.doctor}
-                  onChange={handleChange}
-                  className="excuse-select"
-                  required
-                >
+                <input type="text" placeholder="Search doctors..." value={searchTerm} onChange={handleDoctorSearch} className="excuse-search" />
+                <select name="doctor" value={formData.doctor} onChange={handleChange} className="excuse-select" required>
                   <option value="">Select Doctor</option>
                   {filteredDoctors.map(doctor => (
-                    <option key={doctor.userId} value={doctor.name}>
-                      {doctor.name}
-                    </option>
+                    <option key={doctor.userId} value={doctor.name}>{doctor.name}</option>
                   ))}
                 </select>
               </div>
@@ -375,14 +275,7 @@ const RequestMedicalExcuse = () => {
 
           <div className="excuse-group">
             <label className="excuse-label">Reason for medical excuse:</label>
-            <textarea
-              name="reason"
-              value={formData.reason}
-              onChange={handleChange}
-              className="excuse-textarea"
-              required
-              rows="4"
-            />
+            <textarea name="reason" value={formData.reason} onChange={handleChange} className="excuse-textarea" required rows="4" />
           </div>
         </div>
 
@@ -390,23 +283,15 @@ const RequestMedicalExcuse = () => {
           <h2 className="excuse-section-title">Document Upload</h2>
           <div className="excuse-group">
             <label className="excuse-label">Please upload your document:</label>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="excuse-file-input"
-              accept=".pdf,.doc,.docx,.jpg,.png"
-            />
+            <input type="file" onChange={handleFileChange} className="excuse-file-input" accept=".pdf,.doc,.docx,.jpg,.png" />
           </div>
         </div>
 
         <div className="excuse-actions">
-          <button type="submit" className="excuse-submit-btn">
-            Submit Request
-          </button>
+          <button type="submit" className="excuse-submit-btn">Submit Request</button>
         </div>
       </form>
 
-      {/* Status Section */}
       <div className="status-section">
         <h2 className="status-title">Your Medical Excuse Requests</h2>
         {submittedExcuses.length === 0 ? (
@@ -421,7 +306,6 @@ const RequestMedicalExcuse = () => {
                     {excuse.status}
                   </span>
                 </div>
-
                 <div className="excuse-card-details">
                   <p><strong>Period:</strong> {excuse.startDate} to {excuse.endDate}</p>
                   <p><strong>Reason:</strong> {excuse.reason}</p>
@@ -432,7 +316,6 @@ const RequestMedicalExcuse = () => {
                     </div>
                   )}
                 </div>
-
                 {excuse.status === "Approved" && (
                   <div className="excuse-approved-message">
                     <p>Your medical excuse has been approved.</p>

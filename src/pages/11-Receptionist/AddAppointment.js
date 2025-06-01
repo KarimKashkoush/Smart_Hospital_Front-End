@@ -56,25 +56,28 @@ const AddAppointment = () => {
   }, [patientSearchTerm, patients]);
 
   useEffect(() => {
-    // جلب الدكاترة مرة واحدة
     const fetchDoctors = async () => {
       try {
         const res = await axios.get(`${process.env.REACT_APP_API_URL}/doctors`);
-        setDoctors(res.data.doctors); // فرضًا الشكل
+        console.log("Response from /doctors API:", res.data); // ✅ تحقق من شكل الرد
+        setDoctors(res.data); // ❌ إذا doctors غير موجودة في الرد، هذا السطر لن يعمل
       } catch (err) {
         console.error(err);
       }
     };
+
     fetchDoctors();
   }, []);
+
 
   useEffect(() => {
     const fetchAllExcuses = async () => {
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-      if (!token || !user.userId || doctors.length === 0 || categories.length === 0) return;
-
+      if (!token || !user.userId || !Array.isArray(doctors) || doctors.length === 0 || !Array.isArray(categories) || categories.length === 0) {
+        return;
+      }
       try {
         const response = await fetch(`${process.env.REACT_APP_API_URL}/doctors`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -155,14 +158,15 @@ const AddAppointment = () => {
       time: ''
     });
 
-    if (selectedCategory) {
-      // فلتر من قائمة الدكاترة الكاملة بناءً على الـ categoryId
+    // ✅ أضف تحقق أن doctors موجودة ومصفوفة
+    if (selectedCategory && Array.isArray(doctors)) {
       const filtered = doctors.filter(doc => doc.categoryId === categoryId);
       setFilteredDoctors(filtered);
     } else {
       setFilteredDoctors([]);
     }
   };
+
 
 
 
@@ -209,18 +213,10 @@ const AddAppointment = () => {
     // حوّل التاريخ لISO string
     const dateTime = nextDate.toISOString();
 
-    console.log("Booking appointment for:", {
-      patientId: appointment.patientId,
-      doctorId: appointment.doctor,
-      dateTime: dateTime,
-      patientName: appointment.patientName,
-      notes: appointment.notes
-    });
-
     try {
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/create-booking`, {
         doctorId: appointment.doctor,
-        patientId: appointment.patientId || undefined, 
+        patientId: appointment.patientId || undefined,
         patientName: appointment.patientName,
         dateTime: dateTime,
         notes: appointment.notes,
@@ -255,7 +251,6 @@ const AddAppointment = () => {
   };
 
 
-  console.log("Appointment state:", appointment);
 
   return (
     <div className="add-appointment-container">

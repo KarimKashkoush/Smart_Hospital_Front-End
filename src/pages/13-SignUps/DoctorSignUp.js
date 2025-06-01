@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import "./EmployeeSignUp.css";
+import Swal from 'sweetalert2';
+
 
 const DoctorSignUp = () => {
   const navigate = useNavigate();
@@ -127,10 +129,6 @@ const DoctorSignUp = () => {
       ],
     };
 
-
-    console.log('Sending categoryId:', postData.categoryId);  // دي هنا
-
-
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/create-doctor`, {
         method: 'POST',
@@ -142,15 +140,31 @@ const DoctorSignUp = () => {
 
       if (!res.ok) {
         const errorData = await res.json();
-        console.log('Server error response:', errorData);  // هنا هتطبع كل تفاصيل الخطأ
         throw new Error(errorData.message || 'Registration failed');
       }
 
       setSuccess(true);
-      alert('Registration successful!');
-      navigate('/login');
+      Swal.fire({
+        icon: 'success',
+        title: 'Registration Successful',
+        text: 'You will be redirected to login page.',
+        timer: 2500,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        position: 'center',
+      });
+
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+
     } catch (error) {
-      alert('Error: ' + error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Registration Failed',
+        text: error.message,
+        position: 'center',
+      });
     } finally {
       setIsSubmitting(false);
     }

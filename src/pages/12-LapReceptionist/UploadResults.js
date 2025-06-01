@@ -49,7 +49,7 @@ function UploadResults() {
         const doctorsData = await doctorsRes.json();
 
         setPatients(patientsData.patients);
-        setDoctors(doctorsData.doctors); // افترضت هي بترد doctors
+        setDoctors(doctorsData); // افترضت هي بترد doctors
 
         setLabReceptionist({
           name: receptionistData.labReceptionist.name,

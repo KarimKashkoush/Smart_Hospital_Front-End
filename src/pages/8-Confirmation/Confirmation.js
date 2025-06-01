@@ -12,6 +12,8 @@ const Confirmation = () => {
     date = new Date().toISOString().split('T')[0],
     time = "",
     cost = "50 EGP",
+    discount = "No discount",
+    total = cost,
     reservationNumber = `D-${Math.floor(100000 + Math.random() * 900000)}`
   } = location.state || {};
 
@@ -21,6 +23,7 @@ const Confirmation = () => {
     day: 'numeric',
     year: 'numeric'
   });
+
   return (
     <div className="thank-you-container">
       <div className="thank-you-card">
@@ -47,7 +50,13 @@ const Confirmation = () => {
             Reservation Number: <strong>{reservationNumber}</strong>
           </p>
           <p>
-            Total cost: <strong>{cost}</strong>
+            Base Cost: <strong>{cost}</strong>
+          </p>
+          <p>
+            Discount: <strong>{discount}</strong>
+          </p>
+          <p>
+            Total Cost: <strong>{total}</strong>
           </p>
         </div>
 

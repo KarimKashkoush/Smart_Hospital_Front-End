@@ -30,8 +30,6 @@ const DoctorDetails = () => {
     ? (realRatings.reduce((sum, r) => sum + (r.rating || 0), 0) / realRatings.length).toFixed(1)
     : null;
 
-
-
   useEffect(() => {
     if (!doctor || !doctor.userId) {
       console.error("No doctor or userId found in location state");
@@ -43,7 +41,7 @@ const DoctorDetails = () => {
         if (!res.ok) throw new Error("فشل في جلب البيانات");
         return res.json();
       })
-      .then(data => setDoctorData(data.doctor))
+      .then(data => setDoctorData(data))
       .catch(err => console.error(err));
 
     // Load user from localStorage
@@ -90,21 +88,63 @@ const DoctorDetails = () => {
     return slots;
   }
 
-  function getAvailableTimeSlotsForDay(dayOfWeek, timeSlots) {
-    // نجيب الشفتات الخاصة باليوم ده
-    const shiftsForDay = timeSlots.filter(slot => slot.dayOfWeek === dayOfWeek);
+  function getAvailableTimeSlots(timeSlot, bookings) {
+    const start = timeSlot.startTime; // مثل "09:00"
+    const end = timeSlot.endTime;     // مثل "12:00"
 
-    let allSlots = [];
+    // دالة لتحويل "HH:mm" إلى دقائق من منتصف الليل
+    function timeToMinutes(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
 
-    shiftsForDay.forEach(slot => {
-      // نولد الأوقات حسب startTime و endTime
-      const times = generateTimeSlots(slot.startTime, slot.endTime, 15);
-      allSlots = allSlots.concat(times);
+    // دالة لتحويل الدقائق إلى "HH:mm"
+    function minutesToTime(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
+
+    // جلب كل الفترات (كل 15 دقيقة)
+    const slots = [];
+    let current = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+
+    while (current < endMinutes) {
+      slots.push(minutesToTime(current));
+      current += 15;
+    }
+
+    // الأوقات المحجوزة كـ array من strings "HH:mm"
+    const bookedTimes = bookings.map(b => {
+      // حوّل الوقت في الحجز من ISO إلى "HH:mm"
+      const date = new Date(b.date);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
     });
 
-    return allSlots;
+    // تصفية الأوقات المتاحة (مش محجوزة)
+    const availableSlots = slots.filter(slot => !bookedTimes.includes(slot));
+
+    return availableSlots;
   }
 
+  // مثال على استدعاء الدالة
+  const exampleTimeSlot = {
+    startTime: "09:00",
+    endTime: "12:00"
+  };
+
+  const exampleBookings = [
+    {
+      date: "2025-06-07T06:30:00.000Z"  // UTC
+    }
+  ];
+
+  // **ملاحظة**: الوقت في البيانات بتاعك بالـ UTC، لو انت في توقيت محلي، لازم تضبط التوقيت حسب المنطقة الزمنية.
+  const available = getAvailableTimeSlots(exampleTimeSlot, exampleBookings);
+  console.log(available);
 
 
   const getAvailableSlotsForDate = (date) => {
@@ -138,10 +178,6 @@ const DoctorDetails = () => {
     return allSlots;
   };
 
-
-
-
-  const [rating, setRating] = useState(4);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [slotStatus, setSlotStatus] = useState(null);
@@ -169,9 +205,6 @@ const DoctorDetails = () => {
     return availableDates;
   };
 
-
-
-
   const availableDates = generateAvailableDates();
 
   const handleDateSelect = (date) => {
@@ -181,8 +214,6 @@ const DoctorDetails = () => {
     setShowDatePicker(false);
     checkSlotAvailability(date, ""); // 👈 مرر الـ Date object مش string
   };
-
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -209,10 +240,6 @@ const DoctorDetails = () => {
     }
   };
 
-
-
-
-
   const checkSlotAvailability = (dateObj, shift) => {
     if (!(dateObj instanceof Date) || isNaN(dateObj)) return;
     if (!doctorData.timeSlots) return;
@@ -234,25 +261,26 @@ const DoctorDetails = () => {
     }, 300);
   };
 
-
-
-
   const user = JSON.parse(localStorage.getItem("user"));
   const Id = user?.userId;
   const role = user?.role;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("timeSlotId:", formData.timeSlotId, typeof formData.timeSlotId);
 
-    const timeSlotId = formData.timeSlotId; // هو رقم بالفعل
+    const timeSlotId = formData.timeSlotId;
     const selectedTime = formData.time;
     const dateTimeString = `${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00`;
 
+    // نحسب السعر والخصم
+    const basePrice = 50; // سعر الكشف الأصلي
+    const hasUniversity = user?.university && user.university.trim() !== "";
 
-    console.log(timeSlotId)
+    const discountPercent = hasUniversity ? 25 : 0;
+    const discountAmount = (basePrice * discountPercent) / 100;
+    const totalPrice = basePrice - discountAmount;
+
     try {
-      // استخدم toISOString عشان تتحول لصيغة ISO string
       const dateStr = selectedDate.toISOString();
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/create-booking`, {
@@ -274,13 +302,15 @@ const DoctorDetails = () => {
         throw new Error(result.message || "Booking failed");
       }
 
-      // التنقل بعد الحجز
+      // التنقل بعد الحجز مع إرسال بيانات السعر والخصم
       navigate("/confirmation", {
         state: {
           doctorName: doctor.name,
           date: dateStr.split("T")[0],
           time: formData.time,
-          cost: "50 EGP",
+          cost: `${basePrice} EGP`,
+          discount: discountPercent > 0 ? `${discountPercent}%` : 'No discount',
+          total: `${totalPrice} EGP`,
           reservationNumber: `D-${Math.floor(100000 + Math.random() * 900000)}`,
         },
       });
@@ -288,8 +318,6 @@ const DoctorDetails = () => {
       alert("Booking failed: " + error.message);
     }
   };
-
-
 
 
   // Helper to format date for display

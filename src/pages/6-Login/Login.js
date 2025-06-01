@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from 'react-router-dom';
+import Swal from 'sweetalert2';  // استيراد المكتبة
 import "./login.css";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -23,19 +21,23 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     if (!email || !password) {
-      setError("Email and password are required!");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Email and password are required!',
+        confirmButtonColor: '#3085d6',
+        confirmButtonText: 'OK',
+        position: 'center',
+      });
       return;
     }
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: email, password }),
       });
 
@@ -46,44 +48,58 @@ const Login = () => {
 
       const data = await response.json();
 
-      // حفظ التوكن واليوزر
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.user.role);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // التنقل حسب الدور
-      switch (data.user.role) {
-        case 'patient':
-          navigate('/');
-          break;
-        case 'doctor':
-          navigate(`/DoctorProfile/${data.user.userId}`);
-          break;
-        case 'receptionist':
-          navigate(`/receptionistProfile/${data.user.userId}`);
-          break;
-        case 'lab_receptionist':
-          navigate('/UploadResults');
-          break;
-        default:
-          navigate('/');
-      }
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Login successful!',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'center',
+      });
+
+      // بعد انتهاء التنبيه نعمل التنقل
+      setTimeout(() => {
+        switch (data.user.role) {
+          case 'patient':
+            navigate('/');
+            break;
+          case 'doctor':
+            navigate(`/DoctorProfile/${data.user.userId}`);
+            break;
+          case 'receptionist':
+            navigate(`/receptionistProfile/${data.user.userId}`);
+            break;
+          case 'lab_receptionist':
+            navigate('/UploadResults');
+            break;
+          default:
+            navigate('/');
+        }
+      }, 2000);
 
     } catch (error) {
-      setError(error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: error.message,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'OK',
+        position: 'center',
+      });
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   return (
     <div className="login-auth-container">
       <div className="login-main-container">
         <div className="login-form-box">
           <h2 className="login-form-title">Login</h2>
-          {error && <p className="login-error-message">{error}</p>}
           <form onSubmit={handleSubmit} className="login-form">
             <div className="login-input-group">
               <label className="login-input-label">Email</label>
@@ -119,7 +135,6 @@ const Login = () => {
                   }}
                 />
               </div>
-              {error && <p className="login-error-message">{error}</p>}
             </div>
 
             <div className="login-forgot-password">

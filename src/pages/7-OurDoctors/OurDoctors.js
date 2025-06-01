@@ -5,9 +5,11 @@ import "./ourdoctors.css";
 const OurDoctors = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
-  const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user?.userId;
-  const role = user?.role;
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // جلب بيانات المستخدم من localStorage
   useEffect(() => {
     const user = localStorage.getItem("user");
     if (user) {
@@ -17,227 +19,41 @@ const OurDoctors = () => {
     }
   }, []);
 
-  const doctors = [
-    {
-      id: 1,
-      name: "Prof. Dr. Tamer Farouk Siam",
-      title: "Cardiology Specialist",
-      rating: 4.5,
-      reviews: 128,
-      image: "Prof. Dr. Tamer Farouk Siam.png",
-      className: "doctor-card-tamer", // Unique class name
-      description: "أستاذ جراحة القلب والصدر بجامعة القاهرة ورءيس قسم جراحة القلب والصدر بمستشفي سعاد كفافي"
-    },
-    {
-      id: 2,
-      name: "Dr. Nourhan Mokhtar",
-      title: "Dentistry",
-      rating: 4.8,
-      reviews: 215,
-      image: "Dr.NourhanMokhtar.png",
-      className: "doctor-card-chen",
-      description: "استشاري طب وجراحة الفم والاسنان بمستشفي سعاد كفافي"
+  // جلب بيانات الأطباء من API
+  useEffect(() => {
+    async function fetchDoctors() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/doctors`); // غير الرابط حسب الAPI عندك
+        if (!response.ok) throw new Error("Failed to fetch doctors");
+        const data = await response.json();
+        setDoctors(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    },
-    {
-      id: 3,
-      name: "Dr. Ahmed Tharwat",
-      title: "Dentistry",
-      rating: 4.2,
-      reviews: 87,
-      image: "Dr. Ahmed Tharwat.png",
-      className: "doctor-card-tharwat",
-      description: "استشاري تركيبات وزراعة اسنان بمستشفي سعاد كفافي"
-    },
-    {
-      id: 4,
-      name: "Prof. Dr. Ahmed Basyony",
-      title: "Dentistry",
-      rating: 4.7,
-      reviews: 176,
-      image: "Dr. Ahmed Basyony.png",
-      className: "doctor-card-williams",
-      description: "استاذ تقويم الاسنان كلية طب الاسنان واستشاري التقويم بمستشفي سعاد كفافي"
-    },
-    {
-      id: 5,
-      name: "Prof. Dr. Mahmoud Al-Aseel",
-      title: "Dermatologist",
-      rating: 4.3,
-      reviews: 94,
-      image: "Prof. Dr. Mahmoud Al-Aseel.png",
-      className: "doctor-card-park",
-      description: "أستاذ علاج الجذور بكلية طب الفم و الأسنان جامعة مصر واستشاري علاج الجذور بمستشفي سعاد كفافي"
-    },
-    {
-      id: 6,
-      name: "Dr. Mohamed Nashaat",
-      title: "Dentistry",
-      rating: 4.0,
-      reviews: 65,
-      image: "Dr. Mohamed Nashaat.png",
-      className: "doctor-card-wilson",
-      description: "اخصائي طب أسنان أطفال"
-
-    },
-    {
-      id: 7,
-      name: "Dr. Nehal Kabil",
-      title: "Dentistry",
-      rating: 4.6,
-      reviews: 142,
-      image: "Dr. Nehal Kabil.png",
-      className: "Dr. Nehal Kabil.png",
-      description: "ا د اسنان اطفال وصحة المجتمع في كلية طب اسنان جامعة مصر ورئيس وحدة علاج اسنان الاطفال وذوي الاحتياجات تحت مخدر عام بمستشفي سعاد كفافي"
-    },
-    {
-      id: 8,
-      name: "Dr. Amr Khairy Morsy",
-      title: "Dentistryt",
-      rating: 4.4,
-      reviews: 118,
-      image: "Dr. Amr Khairy Morsy.png",
-      className: "doctor-card-kim",
-      description: "مدرس مساعد قسم تقويم الاسنان جامعه مصر للعلوم والتكنولوجيا واخصائي تقويم في مستشفي سعاد كفافي"
-    },
-    {
-      id: 9,
-      name: "Dr. Mohammed Ali Al-Zamel",
-      title: "ENT Specialist",
-      rating: 4.4,
-      reviews: 118,
-      image: "Dr. Mohammed Ali Al-Zamel.png",
-      className: "doctor-card-kim",
-      description: "استشاري رمد في مستشفي سعاد كفافي"
-    },
-    {
-
-      id: 10,
-      name: "Prof. Dr. Gamal Abdel Fattah",
-      title: "Ear,Nose & Throte Specialist",
-      rating: 4.6,
-      reviews: 142,
-      image: "Prof. Dr. Gamal Abdel Fattah.png",
-      className: "Dr. Nehal Kabil.png",
-      description: "رئيس قسم انف واذن وحنجرة بمستشفي سعاد كفافي"
-    },
-    {
-      id: 11,
-      name: "Dr. Wael Ali Mohamed El-Zomor",
-      title: "Ear,Nose & Throte Specialist",
-      rating: 4.0,
-      reviews: 65,
-      image: "Dr. Wael Ali Mohamed El-Zomor.png",
-      className: "doctor-card-wilson",
-      description: "استشاري انف واذن وحنجرة بمستشفي سعاد كفافي"
-    },
-    {
-      id: 12,
-      name: "Dr. Kareem Mourad",
-      title: "Ophthalmologist",
-      rating: 4.6,
-      reviews: 142,
-      image: "Dr. Kareem Mourad.png",
-      className: "Dr. Nehal Kabil.png",
-      description: "استشاري جراحة مخ واعصاب بمستشفي سعاد كفافي"
-    },
-    {
-      id: 13,
-      name: "Prof. Dr. Magda Abdel Hamid",
-      title: "Pediatrics",
-      rating: 4.4,
-      reviews: 118,
-      image: "Prof. Dr. Magda Abdel Hamid.png",
-      className: "doctor-card-kim",
-      description: "استشاري طب أطفال وحديثي الولادة بجامعة الزقازيق واستشاري طب أطفال وحديثي الولادة بمستشفي سعاد كفافي"
-    },
-    {
-      id: 14,
-      name: "Prof. Dr. Sherif Abdel Rahman",
-      title: "Urology",
-      rating: 4.4,
-      reviews: 118,
-      image: "Prof. Dr. Sherif Abdel Rahman.png",
-      className: "doctor-card-kim",
-      description: "استاذ جراحة الكلي والمسالك بجامعة القاهرة واستشاري ورئيس قسم المسالك البولية بمستشفي سعاد كفافي"
-    },
-    {
-
-      id: 15,
-      name: "Prof. Dr. Hamdy Mohamed Ibrahim",
-      title: "Urology",
-      rating: 4.6,
-      reviews: 142,
-      image: "Prof. Dr. Hamdy Mohamed Ibrahim.png",
-      description: "استشاري جراحة المسالك البولية في مستشفي سعاد كفافي و استاذ جراحة المسالك البولية بجامعة الفيوم"
-    },
-    {
-      id: 16,
-      name: "Dr. Mina Safwat Samble",
-      title: "Urology",
-      rating: 4.4,
-      reviews: 118,
-      image: "Dr. Mina Safwat Samble.png",
-      className: "doctor-card-kim",
-      description: "استشاري جراحة المسالك البولية في مستشفي سعاد كفافي"
-    },
-    {
-      id: 17,
-      name: "Dr. Nauman Mohamed Kamal El-Shafie",
-      title: "Ear,Nose & Throte Specialist",
-      rating: 4.4,
-      reviews: 118,
-      image: "Dr. Nauman Mohamed Kamal El-Shafie.png",
-      className: "doctor-card-kim",
-      description: "استشاري جراحة الوجه والفم والفكين بمستشفي سعاد كفافي"
-
-    },
-    {
-      id: 18,
-      name: "Dr. Lotfi El-Kilani",
-      title: "Ear,Nose & Throte Specialist",
-      rating: 4.6,
-      reviews: 142,
-      image: "Dr. Lotfi El-Kilani.png",
-      description: "استشاري جراحة الفم والوجه والفكين في مستشفي سعاد كفافي , مدرس جراحة الفم والوجه والفكين بجامعة مصر , زميل الكلية الملكية للجراحين -ادنبره انجلترا"
-
-    },
-    {
-      id: 19,
-      name: "Prof. Dr. Khairy El-Morsy",
-      title: "Ear,Nose & Throte Specialist",
-      rating: 4.4,
-      reviews: 118,
-      image: "Prof. Dr. Khairy El-Morsy.png",
-      className: "doctor-card-kim",
-      description: "أستاذ جراحة الفم والوجه والفكين بكلية طب الاسنان جامعة القاهرة واستشاري جراحة الفم والوجه والفكين بمستشفي سعاد كفافي"
-
-    },
-    {
-      id: 20,
-      name: "Dr. Lobna Abdel Azim Rifaat",
-      title: "ENT Specialist",
-      rating: 4.4,
-      reviews: 118,
-      image: "Dr. Lobna Abdel Azim Rifaat.png",
-      className: "doctor-card-kim",
-      description: "استشاري أمراض دم باطنة واستشاري تحاليل الدم والسرطان في مستشفي سعاد كفافي"
-    },
-
-    {
-
-      id: 21,
-      name: "Dr. Hany Gamal",
-      title: "Ophthalmologist",
-      rating: 4.6,
-      reviews: 142,
-      image: "Dr. Hany Gamal.png",
-      description: "رئيس قسم التخدير والعناية المركزة وعلاج الالم بمستشفي سعاد كفافي"
-    },
+    fetchDoctors();
+  }, []);
 
 
-  ];
+  // بيانات المستخدم من localStorage للروابط
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user?.userId;
+  const role = user?.role;
 
+  // دالة لحساب المتوسط من مصفوفة التقييمات
+  // دالة لحساب المتوسط من مصفوفة التقييمات
+  const calculateAverageRating = (ratings) => {
+    if (!ratings || ratings.length === 0) return 0;
+    const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
+    return sum / ratings.length;
+  };
+
+  // تعديل دالة عرض النجوم لتاخد المتوسط
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -246,18 +62,19 @@ const OurDoctors = () => {
     for (let i = 0; i < fullStars; i++) {
       stars.push(<span key={`full-${i}`} className="star">★</span>);
     }
-
     if (hasHalfStar) {
       stars.push(<span key="half" className="star">½</span>);
     }
-
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(<span key={`empty-${i}`} className="star empty">★</span>);
     }
-
     return stars;
   };
+
+
+  // تعديل دالة عرض النجوم لتاخد المتوسط
+
 
   return (
     <>
@@ -291,29 +108,42 @@ const OurDoctors = () => {
           <h2 className="oursection-title">Our Medical Specialists</h2>
           <p className="oursection-subtitle">Top-rated healthcare professionals</p>
 
-          <div className="ourcompact-doctors-grid">
-            {doctors.map((doctor) => (
-              <div key={doctor.id} className={`ourcompact-doctor-card ${doctor.className}`}>
-                <div className="ourdoctor-image-container">
-                  <img src={doctor.image} alt={doctor.name} className="ourdoctor-image" />
-                </div>
-                <div className="ourcompact-doctor-info">
-                  <h3 className="ourdoctor-name">{doctor.name}</h3>
-                  <p className="ourdoctor-title">{doctor.title}</p>
-                  <div className="ourdoctor-rating">
-                    <div className="starss">
-                      {renderStars(doctor.rating)}
-                      <span className="rating-valuee">{doctor.rating.toFixed(1)}</span>
+          {loading && <p>Loading doctors...</p>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
+
+          {!loading && !error && (
+            <div className="ourcompact-doctors-grid">
+              {doctors.length === 0 && <p>No doctors found.</p>}
+              {doctors.map((doctor) => {
+                const avgRating = calculateAverageRating(doctor.Rating);
+                return (
+                  <div key={doctor.userId} className={`ourcompact-doctor-card ${doctor.className || ""}`}>
+                    <div className="ourdoctor-image-container">
+                      <img
+                        src={doctor.profileImage || "logo1.png"}
+                        alt={doctor.name}
+                        className="ourdoctor-image"
+                      />
                     </div>
-                    <p className="review-count">({doctor.reviews} reviews)</p>
+                    <div className="ourcompact-doctor-info">
+                      <h3 className="ourdoctor-name">{doctor.name}</h3>
+                      <p className="ourdoctor-title">{doctor.specializationShort}</p>
+                      <div className="ourdoctor-rating">
+                        <div className="starss">
+                          {renderStars(avgRating)}
+                          <span className="rating-valuee">{avgRating.toFixed(1)}</span>
+                        </div>
+                        <p className="review-count">({doctor.Rating.length} reviews)</p>
+                      </div>
+                      <div className="ourdoctor-description">
+                        <p>{doctor.education}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ourdoctor-description">
-                    <p>{doctor.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 

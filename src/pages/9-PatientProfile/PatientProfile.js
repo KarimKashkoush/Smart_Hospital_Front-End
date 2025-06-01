@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import MedicalRecord from './MedicalRecord';
@@ -56,7 +56,8 @@ const PatientProfile = () => {
           age: age,
           id: data.userId,
           university: data.university || 'Not specified',
-          profileImage: data.user?.image || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+          profileImage: data.user?.image || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+          medicalHistory: data.medicalHistory
         });
       } catch (error) {
         console.error('Error fetching patient data:', error);
@@ -166,8 +167,8 @@ const PatientProfile = () => {
   };
 
   const logout = () => {
-    localStorage.clear(); 
-    navigate('/logIn');   
+    localStorage.clear();
+    navigate('/logIn');
   };
 
 
@@ -304,6 +305,18 @@ const PatientProfile = () => {
               <p><strong>Name:</strong> {patient.name}</p>
               <p><strong>Age:</strong> {patient.age}</p>
               <p><strong>University:</strong> {patient.university}</p>
+              <div>
+                <strong>Medical History:</strong>
+                <ul>
+                  {patient.medicalHistory && patient.medicalHistory.length > 0 ? (
+                    patient.medicalHistory.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))
+                  ) : (
+                    <li>No medical history available</li>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         );
