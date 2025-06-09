@@ -59,8 +59,8 @@ const AddAppointment = () => {
     const fetchDoctors = async () => {
       try {
         const res = await axios.get(`${process.env.REACT_APP_API_URL}/doctors`);
-        console.log("Response from /doctors API:", res.data); // ✅ تحقق من شكل الرد
-        setDoctors(res.data); // ❌ إذا doctors غير موجودة في الرد، هذا السطر لن يعمل
+        console.log("Response from /doctors API:", res.data);      
+        setDoctors(res.data);           
       } catch (err) {
         console.error(err);
       }
@@ -135,7 +135,7 @@ const AddAppointment = () => {
 
   const handlePatientInputChange = (e) => {
     setPatientSearchTerm(e.target.value);
-    setAppointment({ ...appointment, patientName: e.target.value, patientId: '' });  // افرغ patientId
+    setAppointment({ ...appointment, patientName: e.target.value, patientId: '' });  
   };
 
 
@@ -158,7 +158,6 @@ const AddAppointment = () => {
       time: ''
     });
 
-    // ✅ أضف تحقق أن doctors موجودة ومصفوفة
     if (selectedCategory && Array.isArray(doctors)) {
       const filtered = doctors.filter(doc => doc.categoryId === categoryId);
       setFilteredDoctors(filtered);
@@ -190,7 +189,7 @@ const AddAppointment = () => {
     const todayIndex = today.getDay();
 
     let daysUntil = dayIndex - todayIndex;
-    if (daysUntil < 0) daysUntil += 7; // لو اليوم فات، خد الأسبوع الجاي
+    if (daysUntil < 0) daysUntil += 7;   
 
     const nextDate = new Date(today);
     nextDate.setDate(today.getDate() + daysUntil);
@@ -204,13 +203,10 @@ const AddAppointment = () => {
 
     const token = localStorage.getItem("token");
 
-    // استخرج التاريخ من اليوم المختار
     const nextDate = getNextDateOfWeek(appointment.day);
-    // استخرج الوقت
     const [hours, minutes] = appointment.time.split(':');
     nextDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-    // حوّل التاريخ لISO string
     const dateTime = nextDate.toISOString();
 
     try {
@@ -328,7 +324,7 @@ const AddAppointment = () => {
 
                     const uniqueDays = [...new Set(slots.map(slot => slot.dayOfWeek).filter(Boolean))];
                     if (uniqueDays.length > 0) {
-                      setAppointment(prev => ({ ...prev, day: uniqueDays[0] })); // عيّن اليوم الأول تلقائيًا
+                      setAppointment(prev => ({ ...prev, day: uniqueDays[0] }));  
                     }
 
                   } else {

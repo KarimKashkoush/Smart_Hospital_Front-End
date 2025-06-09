@@ -48,7 +48,6 @@ const DoctorSignUp = () => {
     <div style={styles.container}>
       <h2 style={styles.header}>تسجيل طبيب جديد</h2>
       <form onSubmit={handleSubmit}>
-        {/* جميع حقول إدخال البيانات */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>الاسم بالكامل:</label>
           <input
@@ -59,9 +58,7 @@ const DoctorSignUp = () => {
             required
           />
         </div>
-        
-        {/* باقي الحقول بنفس النمط */}
-        
+                
         <button type="submit" style={styles.button}>
           تسجيل الحساب
         </button>

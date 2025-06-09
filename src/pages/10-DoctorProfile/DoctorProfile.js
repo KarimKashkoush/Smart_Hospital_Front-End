@@ -110,8 +110,7 @@ const DoctorProfile = () => {
         if (!response.ok) throw new Error('Failed to fetch doctor data');
 
         const data = await response.json();
-
-
+        
         setDoctorData(prev => ({
           ...prev,
           name: data.name,
@@ -300,16 +299,11 @@ const DoctorProfile = () => {
     navigate('/logIn');
   };
 
-  // حساب متوسط التقييم (لو مفيش تقييمات يرجع 0)
   const calculateAverageRating = () => {
     if (!doctorData.Rating || doctorData.Rating.length === 0) return 0;
     const total = doctorData.Rating.reduce((sum, r) => sum + r.rating, 0);
     return (total / doctorData.Rating.length).toFixed(1); // عدد عشري واحد
   };
-
-
-  console.log(doctorData.Rating)
-
 
   return (
     <div className="profile-container">

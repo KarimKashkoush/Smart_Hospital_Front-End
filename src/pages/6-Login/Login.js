@@ -46,8 +46,9 @@ const Login = () => {
         throw new Error(errorData.message || 'Login failed');
       }
 
-      const data = await response.json();
 
+      localStorage.clear();
+      const data = await response.json();
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.user.role);
       localStorage.setItem('user', JSON.stringify(data.user));

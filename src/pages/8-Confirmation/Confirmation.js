@@ -17,7 +17,6 @@ const Confirmation = () => {
     reservationNumber = `D-${Math.floor(100000 + Math.random() * 900000)}`
   } = location.state || {};
 
-  // Format the date nicely
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',

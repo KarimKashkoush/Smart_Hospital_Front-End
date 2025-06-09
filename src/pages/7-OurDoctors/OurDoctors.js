@@ -9,7 +9,6 @@ const OurDoctors = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // جلب بيانات المستخدم من localStorage
   useEffect(() => {
     const user = localStorage.getItem("user");
     if (user) {
@@ -19,13 +18,12 @@ const OurDoctors = () => {
     }
   }, []);
 
-  // جلب بيانات الأطباء من API
   useEffect(() => {
     async function fetchDoctors() {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/doctors`); // غير الرابط حسب الAPI عندك
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/doctors`);
         if (!response.ok) throw new Error("Failed to fetch doctors");
         const data = await response.json();
         setDoctors(data);
@@ -40,20 +38,16 @@ const OurDoctors = () => {
   }, []);
 
 
-  // بيانات المستخدم من localStorage للروابط
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.userId;
   const role = user?.role;
 
-  // دالة لحساب المتوسط من مصفوفة التقييمات
-  // دالة لحساب المتوسط من مصفوفة التقييمات
   const calculateAverageRating = (ratings) => {
     if (!ratings || ratings.length === 0) return 0;
     const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
     return sum / ratings.length;
   };
 
-  // تعديل دالة عرض النجوم لتاخد المتوسط
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -71,9 +65,6 @@ const OurDoctors = () => {
     }
     return stars;
   };
-
-
-  // تعديل دالة عرض النجوم لتاخد المتوسط
 
 
   return (

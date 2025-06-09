@@ -4,8 +4,9 @@ import emailjs from '@emailjs/browser';
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user'));
 const doctorId = user?.userId;
+
+console.log(doctorId)
 const DoctorAppointments = () => {
-  // States
   const [showDiagnosis, setShowDiagnosis] = useState(null);
   const [diagnoses, setDiagnoses] = useState({});
   const [treatments, setTreatments] = useState({});
@@ -18,7 +19,6 @@ const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
 
 
-  // Delay options
   const delayOptions = [
     { value: '15', label: '15 minutes' },
     { value: '30', label: '30 minutes' },
@@ -28,7 +28,6 @@ const DoctorAppointments = () => {
     { value: '120', label: '2 hours' }
   ];
 
-  // Fetch appointments from API (مثال)
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
     const id = user?.userId;
@@ -78,10 +77,9 @@ const DoctorAppointments = () => {
     setSelectedDelay('');
   };
 
-
-
-  // Submit diagnosis (مثال)
   const submitDiagnosis = async (appointment) => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const Id = user?.userId;
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/create-medical-record`, {
         method: "POST",
@@ -90,7 +88,7 @@ const DoctorAppointments = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          doctorId: doctorId,
+          doctorId: Id,
           patientId: appointment.patientId,
           diagnosis: diagnoses[appointment.id],
           treatmentDetails: treatments[appointment.id],
@@ -120,7 +118,6 @@ const DoctorAppointments = () => {
       alert("Diagnosis submitted and booking status updated successfully!");
       setShowDiagnosis(null);
 
-      // تحديث الحالة محلياً (لو تحب)
       setAppointments((prev) =>
         prev.map((app) =>
           app.id === appointment.id ? { ...app, status: "confirmed" } : app
