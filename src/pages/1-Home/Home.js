@@ -9,7 +9,7 @@ const Home = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([]); 
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -23,7 +23,7 @@ const Home = () => {
       try {
         const response = await fetch(`${process.env.REACT_APP_API_URL}/get-categories`);
         const data = await response.json();
-        setCategories(data.categories); 
+        setCategories(data.categories);
       } catch (error) {
         console.error("Error fetching categories:", error);
       }
@@ -82,7 +82,7 @@ const Home = () => {
               <div className="category-content">
                 <h3 className="category-title">{category.name}</h3>
                 <p className="category-description">{category.description}</p>
-                <Link to={`${category.link}/${category.id}`}  className="explore-button">
+                <Link to={`${category.link}/${category.id}`} className="explore-button">
                   Explore Department
                 </Link>
               </div>

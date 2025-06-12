@@ -28,10 +28,10 @@ const PreviousAppointments = () => {
             diagnosis: item.diagnosis || 'No diagnosis',
             treatment: item.treatmentDetails || 'No treatment details',
             status: 'Completed',
-            rating: 0,
-            feedback: '',
-            isRated: false,
-            submittedAt: null,
+            rating: item.rating?.rating,
+            isRated: item.rating !== null, // ← دي الإضافة المهمة
+            feedback: item.rating?.comment || '',
+            submittedAt: item.rating?.createdAt || null,
             showRatingModal: false
           };
         });
@@ -75,6 +75,8 @@ const PreviousAppointments = () => {
     ));
   };
 
+  console.log(appointments)
+
   const submitFeedback = async (id) => {
     try {
       const appointmentToUpdate = appointments.find(a => a.id === id);
@@ -98,7 +100,8 @@ const PreviousAppointments = () => {
           patientId,
           doctorId: updatedAppointment.doctorId,
           rating: updatedAppointment.rating,
-          comment: updatedAppointment.feedback
+          comment: updatedAppointment.feedback,
+          medicalRecordId: updatedAppointment.id  // مهم
         })
       });
 

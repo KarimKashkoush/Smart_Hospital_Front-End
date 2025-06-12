@@ -159,7 +159,6 @@ const PatientProfile = () => {
 
   const saveChanges = () => {
     setIsEditing(false);
-    console.log("Saved changes:", patient);
   };
 
   const goToHome = () => {
